@@ -7,9 +7,8 @@ import './SafeMath.sol';
 contract COSTeamWallet is Ownable{
   using SafeMath for uint256;
 
-  uint256 constant public FREEZE_TIME = 365 days;
+  uint256 constant public FREEZE_TIME = 425 days; //accounts for ICO days
   
-  address public withdrawalAddress;
   COSToken public cosToken;
   uint256 public startTime;
   uint256 public totalWithdrawn;
@@ -24,16 +23,13 @@ contract COSTeamWallet is Ownable{
     _; 
   }
   
-
   function COSTeamWallet(address _cosToken)
     public
   {  
     require(_cosToken != 0x0);
-
     startTime = now;
     cosToken = COSToken(_cosToken);
     owner = msg.sender;
-
   }
 
   function addTeamMember(address _teamMember, uint256 _tokenAmount)
