@@ -1,8 +1,8 @@
 pragma solidity 0.4.18;
 
 import './COSToken.sol';
-import './Ownable.sol';
-import './SafeMath.sol';
+import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
+import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 
 contract COSTeamWallet is Ownable{
   using SafeMath for uint256;

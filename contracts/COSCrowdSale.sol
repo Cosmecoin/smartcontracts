@@ -1,8 +1,8 @@
 pragma solidity 0.4.18;
 
 import './COSToken.sol';
-import './Ownable.sol';
-import './SafeMath.sol';
+import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
+import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 
 contract COSCrowdSale is Ownable{
   using SafeMath for uint256;
@@ -149,7 +149,7 @@ contract COSCrowdSale is Ownable{
     uint256 tierRemainingTokens;
     uint256 tknsRequested;
   
-    while(remainingWei >= price || tier < TIERS) {
+    while(remainingWei >= price && tier != TIERS) {
 
       SaleTier storage tiers = saleTier[tier];
       price = (ETH_DECIMALS.mul(uint256(16+(4*tier))).div(1000)).div(ethPrice);

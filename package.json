@@ -1,0 +1,25 @@
+{
+  "name": "iconsult",
+  "version": "1.0.0",
+  "description": "cosmecoin",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Cosmecoin/smartcontracts.git"
+  },
+  "author": "Chris Barber",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Cosmecoin/smartcontracts/issues"
+  },
+  "homepage": "https://github.com/Cosmecoin/smartcontracts#readme",
+  "dependencies": {
+    "zeppelin-solidity": "^1.5.0"
+  }
+}

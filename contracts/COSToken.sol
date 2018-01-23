@@ -1,7 +1,7 @@
 pragma solidity 0.4.18;
 
-import './StandardToken.sol';
-import './Ownable.sol';
+import 'zeppelin-solidity/contracts/token/StandardToken.sol';
+import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 
 contract COSToken is StandardToken, Ownable {
     
