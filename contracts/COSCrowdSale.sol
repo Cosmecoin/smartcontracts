@@ -10,38 +10,45 @@ contract COSCrowdSale is Ownable{
   uint256 constant internal MIN_CONTRIBUTION = 1 ether;
   uint256 constant internal TOKEN_DECIMALS = 10**10;
   uint256 constant internal ETH_DECIMALS = 10**18;
-  uint8 constant internal TIER_COUNT = 7;
-  uint8 constant internal BONUS_TIER = 3;
-  
-  uint256 public remainingTokens;
+  uint8 constant internal TIERS = 7;
+  uint8 constant internal BONUS_TIER = 2;
+
+  uint256 private approvedCounter;
+  uint256 private deniedCounter;
+  uint256 private bonusCounter;
+
   uint256 public tknsPerPerson;
   uint256 public icoStartTime;
   uint256 public icoEndTime;
   address public teamWallet;
+  
   uint256 public weiRaised;
   uint256 public ethPrice;
   uint256 public decimals;
-  uint256 public minLimit;
   address public holdings;
   address public owner;
   uint256 public cap;
   uint8 private tier;
   bool private paused;
+  
+
   bool public tknsCalculated;
 
   enum Status {
     New, Approved, Denied
   }
 
-  struct WhitelistedInvestors {
-    uint256 contrAmount; //amount in wei
+  struct Participant {
+    uint256 contrAmount;
     uint256 qtyTokens;
+    uint256 remainingWei;
     uint8 tierPurchased;
     bool bonusPaid;
     Status whitelistStatus;
+
   }
 
-  mapping(address => WhitelistedInvestors) investors;
+  mapping(address => Participant) participants;
 
   //The Cosmocoin token contract
   COSToken public cosToken; 
@@ -64,16 +71,16 @@ contract COSCrowdSale is Ownable{
   }
 
   modifier icoIsActive() {
-    require(weiRaised < cap && now < icoEndTime && calculateUnsoldICOTokens() > 0);
+    require(weiRaised < cap && now < icoEndTime && calculateRemainingTokens() > 0);
     _;
   }
 
   modifier icoHasEnded() {
-    require(weiRaised >= cap || now > icoEndTime || calculateUnsoldICOTokens() == 0);
+    require(weiRaised >= cap || now > icoEndTime || calculateRemainingTokens() == 0);
     _;
   }
 
-  modifier pausedContract(){
+  modifier activeContract(){
     require(paused == false);
     _;
   }
@@ -101,7 +108,7 @@ contract COSCrowdSale is Ownable{
     saleTier[0].tokensToBeSold = (5000000)*TOKEN_DECIMALS;
     saleTier[1].tokensToBeSold = (7500000)*TOKEN_DECIMALS;
 
-   for(uint8 i=2; i<TIER_COUNT; i++){ 
+   for(uint8 i=2; i<TIERS; i++){ 
     saleTier[i].tokensToBeSold = (37500000)*TOKEN_DECIMALS;
    } 
  }
@@ -123,123 +130,97 @@ contract COSCrowdSale is Ownable{
     external
     payable
     icoIsActive
-    pausedContract
+    activeContract
     isValidPayload
     
     returns (uint8)
   {
-    require(investors[msg.sender].whitelistStatus != Status.Denied);
-    require(msg.value >= MIN_CONTRIBUTION);
-
-    uint256 price = (ETH_DECIMALS.mul(uint256(16+(4*tier))).div(1000)).div(ethPrice); //wei per token discluding decimals
-    uint256 buyTokensRemainingWei;
-    uint256 qtyOfTokensRequested = (msg.value.div(price)).mul(TOKEN_DECIMALS);
-    uint256 tierRemainingTokens = saleTier[tier].tokensToBeSold.sub(saleTier[tier].tokensSold);
-    uint256 remainingWei;
-    uint256 amount;
-
-    investors[msg.sender].tierPurchased = tier; 
     
-    if (qtyOfTokensRequested >= tierRemainingTokens){
-      remainingWei = msg.value.sub((tierRemainingTokens.div(TOKEN_DECIMALS)).mul(price));
-      qtyOfTokensRequested = tierRemainingTokens;
-      tier++; 
+    Participant storage participant = participants[msg.sender];
 
-      if (tier < TIER_COUNT){
-        buyTokensRemainingWei = (remainingWei.mul(price)).mul(TOKEN_DECIMALS);
-        qtyOfTokensRequested += buyTokensRemainingWei;
-        saleTier[tier].tokensSold += buyTokensRemainingWei;
-        remainingWei = 0;
-      } else {
-        msg.sender.transfer(remainingWei); 
-      }
+    require(ethPrice != 0);
+    require(participant.whitelistStatus != Status.Denied);
+    require(msg.value >= MIN_CONTRIBUTION);
+    participant.tierPurchased = tier; 
 
-    } else {
-      saleTier[tier].tokensSold += qtyOfTokensRequested;
+    uint256 remainingWei = msg.value;
+    uint256 totalTokensRequested;
+    uint256 price = (ETH_DECIMALS.mul(uint256(16+(4*tier))).div(1000)).div(ethPrice);
+    uint256 tierRemainingTokens;
+    uint256 tknsRequested;
+  
+    while(remainingWei >= price){
+
+      SaleTier storage tiers = saleTier[tier];
+      price = (ETH_DECIMALS.mul(uint256(16+(4*tier))).div(1000)).div(ethPrice);
+      tknsRequested = (remainingWei.div(price)).mul(TOKEN_DECIMALS);
+      tierRemainingTokens = tiers.tokensToBeSold.sub(tiers.tokensSold);
+      if(tknsRequested >= tierRemainingTokens){
+        tknsRequested -= tierRemainingTokens;
+        tiers.tokensSold += tierRemainingTokens;
+        totalTokensRequested += tierRemainingTokens;
+        remainingWei -= ((tierRemainingTokens.mul(price)).div(TOKEN_DECIMALS));
+        tier++;
+      } else{
+        tiers.tokensSold += tknsRequested;
+        totalTokensRequested += tknsRequested;
+        remainingWei -= ((tknsRequested.mul(price)).div(TOKEN_DECIMALS));
+      }  
     }
 
-    amount = msg.value.sub(remainingWei);
+    uint256 amount = msg.value.sub(remainingWei);
     weiRaised += amount;
     holdings.transfer(amount);
 
-    investors[msg.sender].contrAmount += amount;
-    investors[msg.sender].tierPurchased = tier;
-    if(investors[msg.sender].whitelistStatus == Status.Approved){
-      cosToken.transferFrom(owner, msg.sender, qtyOfTokensRequested);
-      LogTokensTransferedFrom(owner, msg.sender, qtyOfTokensRequested);     
-    } else {
-      investors[msg.sender].qtyTokens += qtyOfTokensRequested;
-      LogTokensReserved(msg.sender, qtyOfTokensRequested);
-    }
-
+    participant.remainingWei += remainingWei;
+    participant.contrAmount += amount;
+    participant.qtyTokens += totalTokensRequested;
+    LogTokensReserved(msg.sender, totalTokensRequested);
+    
     return tier;
   }
+
+  ///@notice calculates how many wei per token
+//   function calculateTokenPrice(uint8 _tier)
+//     view
+//     internal
+//     returns (uint256)
+//     {
+//       uint256 price = (ETH_DECIMALS.mul(uint256(16+(4*_tier))).div(1000)).div(ethPrice);
+//       return price;
+//     }
 
   ///@notice I want to get the price of ethereum every time I call the buy tokens function
   ///what has to change in this function to make that happen safely
   ///param ethereum price will exclude decimals
-  function getEtherPrice(uint256 _price)
+  function setEtherPrice(uint256 _price)
     external
     onlyOwner
     {
       ethPrice = _price;
     }
 
-  /// notice interface for founders to whitelist investors
-  ///  addresses array of investors
-  ///  tier Number
-  ///  status enable or disable
-  function whitelistAddresses(address[] _addresses, bool _status) 
+  ///@notice interface for founders to whitelist participants
+  function approveAddressForWhitelist(address _address) 
     public 
-    onlyOwner 
-    {
-        for (uint256 i = 0; i < _addresses.length; i++) {
-            address investorAddress = _addresses[i];
-            if(_status == true){
-                approvedWhitelistAddress(investorAddress); 
-            } else {
-                deniedWhitelistAddress(investorAddress);  
-            } 
-        }
-   }
-
-  /// notice sends requested tokens to the whitelist person
-  function approvedWhitelistAddress(address _investorAddress) 
-    internal
-  {
-    require(_investorAddress != 0x0);
-    investors[_investorAddress].whitelistStatus = Status.Approved;
-    uint256 tkns = investors[_investorAddress].qtyTokens;
-    investors[_investorAddress].qtyTokens = 0;
-    cosToken.transferFrom(owner, _investorAddress, tkns);
-    LogTokensTransferedFrom(owner, msg.sender, tkns);
-  }
-
-  /// @notice allows denied buyers the ability to get their Ether back
-  function deniedWhitelistAddress(address _investorAddress) 
-    internal 
-  {
-    require(_investorAddress != 0x0);
-    investors[_investorAddress].whitelistStatus = Status.Denied;
-    investors[_investorAddress].qtyTokens = 0;     
-  }
-
-  /// @notice used to move tokens from the later tiers into the earlier tiers
-  /// contract must be paused to do the move
-  /// param tier from later tier to subtract the tokens from
-  /// param tier to add the tokens to
-  /// param how many tokens to take
-  function moveTokensForSale(uint8 _tierFrom, uint8 _tierTo, uint256 _tokens) 
-    public
     onlyOwner
-  {
-    require(paused = true);
-    require(_tierFrom > _tierTo);
-    require(_tokens <= ((saleTier[_tierFrom].tokensToBeSold).sub(saleTier[_tierFrom].tokensSold)));
+    icoHasEnded 
+    {
+      Participant storage participant = participants[_address];
+      participant.whitelistStatus = Status.Approved;
+      if(participant.tierPurchased <= BONUS_TIER){
+        bonusCounter++;
+      }
+    }
 
-    saleTier[_tierFrom].tokensToBeSold.sub(_tokens);
-    saleTier[_tierTo].tokensToBeSold.add(_tokens);
-  }
+  ///@notice interface for founders to whitelist participants
+  function denyAddressForWhitelist(address _address) 
+    public 
+    onlyOwner
+    icoHasEnded 
+    {
+      participants[_address].whitelistStatus = Status.Denied;
+    }
 
   /// @notice pause specific funtions of the contract
   function pauseContract() public onlyOwner {
@@ -256,7 +237,8 @@ contract COSCrowdSale is Ownable{
     public
     returns (bool whitelisted, bool bonusTier)
   {
-    return (investors[msg.sender].whitelistStatus == Status.Approved, investors[msg.sender].tierPurchased < 3);
+    Participant storage participant = participants[msg.sender];
+    return (participant.whitelistStatus == Status.Approved, participant.tierPurchased < BONUS_TIER);
   }     
 
   /// @dev freeze unsold tokens for use at a later time
@@ -272,11 +254,13 @@ contract COSCrowdSale is Ownable{
   }
 
   /// @notice calculate unsold tokens for transfer to holdings to be used at a later date
-  function calculateUnsoldICOTokens()
+  function calculateRemainingTokens()
+    view
     internal
     returns (uint256)
   {
-    for(uint8 i = 0; i < TIER_COUNT; i++){
+    uint256 remainingTokens;
+    for(uint8 i = 0; i < TIERS; i++){
       if(saleTier[i].tokensSold < saleTier[i].tokensToBeSold){
         remainingTokens += saleTier[i].tokensToBeSold.sub(saleTier[i].tokensSold);
       }
@@ -286,19 +270,31 @@ contract COSCrowdSale is Ownable{
 
   ///param total number of whitelist participants collected from the final count in the database
   ///manually entered here tokens will be then be available for collection by the qualified participants
-  function distributeRemainingTokens(uint256 _totalNumWhitelisters)
+  function distributeRemainingTokens()
     public
     icoHasEnded
     onlyOwner
     returns(bool success)
   {
-    require(remainingTokens > 20000*TOKEN_DECIMALS);
-    uint256 bonusDistribution = remainingTokens.div(2); //split evenly between participants and reserve  
-    tknsPerPerson = bonusDistribution.div(_totalNumWhitelisters);
-    
+    require(calculateRemainingTokens() > 20000*TOKEN_DECIMALS);
+    uint256 bonusDistribution = calculateRemainingTokens().div(2); //split evenly between participants and reserve  
+    tknsPerPerson = bonusDistribution.div(bonusCounter);
     tknsCalculated = true;
-
     return true;   
+  }
+
+  /// notice sends requested tokens to the whitelist person
+  function claimTokens() 
+    external
+    icoHasEnded
+  {
+    Participant storage participant = participants[msg.sender];
+    require(participant.whitelistStatus == Status.Approved);
+    require(participant.qtyTokens != 0);
+    uint256 tkns = participant.qtyTokens;
+    participant.qtyTokens = 0;
+    LogTokensTransferedFrom(owner, msg.sender, tkns);
+    cosToken.transferFrom(owner, msg.sender, tkns);
   }
 
   ///@notice participants can claim their bonus tokens here after the distribute Remaining Tokens function 
@@ -306,17 +302,56 @@ contract COSCrowdSale is Ownable{
   ///and purchased within the BONUS TIERS
   function claimBonusTokens()
     public
+    icoHasEnded
   {
+    Participant storage participant = participants[msg.sender];
     require(tknsCalculated);
-    require(investors[msg.sender].whitelistStatus == Status.Approved);
-    require(investors[msg.sender].tierPurchased <= BONUS_TIER);
-    require(!investors[msg.sender].bonusPaid);
-
-    investors[msg.sender].bonusPaid = true;
+    require(participant.whitelistStatus == Status.Approved);
+    require(participant.tierPurchased <= BONUS_TIER);
+    require(!participant.bonusPaid);
+    participant.bonusPaid = true;
     LogBonusRedeemed(msg.sender, tknsPerPerson); 
+    cosToken.transferFrom(owner, msg.sender, tknsPerPerson); 
+  }
 
-    cosToken.transferFrom(owner, msg.sender, tknsPerPerson);
+  /// @notice no ethereum will be held in the crowdsale contract
+  /// when refunds become available the amount of Ethererum needed will
+  /// be manually transfered back to the crowdsale to be refunded
+  function claimRefund()
+    external
+    activeContract
+    icoHasEnded
+    returns (bool success)
+  {
+    Participant storage participant = participants[msg.sender];
+    require(participant.whitelistStatus == Status.Denied);
+    uint256 sendValue = participant.contrAmount;
+    participant.contrAmount = 0;
+    participant.qtyTokens = 0;
+    LogWithdrawal(msg.sender, sendValue);
+    msg.sender.transfer(sendValue);
+    return true;
+  }
 
-    
+
+  /// @notice no ethereum will be held in the crowdsale contract
+  /// when refunds become available the amount of Ethererum needed will
+  /// be manually transfered back to the crowdsale to be refunded
+  /// @notice only the last person that buys tokens if they deposited enought to buy more 
+  /// tokens than what is available will be able to use this function
+  function claimRemainingWei()
+    external
+    activeContract
+    icoHasEnded
+    returns (bool success)
+  {
+    Participant storage participant = participants[msg.sender];
+    require(participant.whitelistStatus == Status.Approved);
+    require(participant.remainingWei != 0);
+    uint256 sendValue = participant.remainingWei;
+    participant.remainingWei = 0;
+    LogWithdrawal(msg.sender, sendValue);
+    msg.sender.transfer(sendValue);
+    return true;
   }
 }
