@@ -12,16 +12,11 @@ contract COSCrowdSale is Ownable{
   uint256 constant internal ETH_DECIMALS = 10**18;
   uint8 constant internal TIERS = 7;
   uint8 constant internal BONUS_TIER = 2;
-
-  uint256 private approvedCounter;
-  uint256 private deniedCounter;
   uint256 private bonusCounter;
-
   uint256 public tknsPerPerson;
   uint256 public icoStartTime;
   uint256 public icoEndTime;
   address public teamWallet;
-  
   uint256 public weiRaised;
   uint256 public ethPrice;
   uint256 public decimals;
