@@ -25,8 +25,6 @@ contract COSCrowdSale is Ownable{
   uint256 public cap;
   uint8 private tier;
   bool private paused;
-  
-
   bool public tknsCalculated;
 
   enum Status {
@@ -40,7 +38,6 @@ contract COSCrowdSale is Ownable{
     uint8 tierPurchased;
     bool bonusPaid;
     Status whitelistStatus;
-
   }
 
   mapping(address => Participant) participants;
@@ -98,7 +95,7 @@ contract COSCrowdSale is Ownable{
     decimals = 10;
     holdings = _holdings;
     owner = msg.sender;
-    cap = 20969 ether;
+    cap = 5969 ether;
 
     saleTier[0].tokensToBeSold = (5000000)*TOKEN_DECIMALS;
     saleTier[1].tokensToBeSold = (7500000)*TOKEN_DECIMALS;
@@ -136,9 +133,13 @@ contract COSCrowdSale is Ownable{
     require(ethPrice != 0);
     require(participant.whitelistStatus != Status.Denied);
     require(msg.value >= MIN_CONTRIBUTION);
-    participant.tierPurchased = tier; 
 
-    uint256 remainingWei = msg.value;
+    if(participant.contrAmount == 0){
+      participant.tierPurchased = tier; 
+    } 
+
+    uint256 remainingWei = msg.value.add(participant.remainingWei);
+    participant.remainingWei = 0;
     uint256 totalTokensRequested;
     uint256 price = (ETH_DECIMALS.mul(uint256(16+(4*tier))).div(1000)).div(ethPrice);
     uint256 tierRemainingTokens;
@@ -174,16 +175,6 @@ contract COSCrowdSale is Ownable{
     
     return tier;
   }
-
-  ///@notice calculates how many wei per token
-//   function calculateTokenPrice(uint8 _tier)
-//     view
-//     internal
-//     returns (uint256)
-//     {
-//       uint256 price = (ETH_DECIMALS.mul(uint256(16+(4*_tier))).div(1000)).div(ethPrice);
-//       return price;
-//     }
 
   ///@notice I want to get the price of ethereum every time I call the buy tokens function
   ///what has to change in this function to make that happen safely
@@ -327,7 +318,6 @@ contract COSCrowdSale is Ownable{
     msg.sender.transfer(sendValue);
     return true;
   }
-
 
   /// @notice no ethereum will be held in the crowdsale contract
   /// when refunds become available the amount of Ethererum needed will
