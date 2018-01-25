@@ -191,6 +191,7 @@ contract COSCrowdSale is Ownable{
     onlyOwner
     icoHasEnded 
     {
+      require(_address != address(0));
       Participant storage participant = participants[_address];
       participant.whitelistStatus = Status.Approved;
       if(participant.tierPurchased <= BONUS_TIER){
@@ -204,6 +205,7 @@ contract COSCrowdSale is Ownable{
     onlyOwner
     icoHasEnded 
     {
+      require(_address != address(0));
       participants[_address].whitelistStatus = Status.Denied;
     }
 
@@ -223,7 +225,7 @@ contract COSCrowdSale is Ownable{
     returns (bool whitelisted, bool bonusTier)
   {
     Participant storage participant = participants[msg.sender];
-    return (participant.whitelistStatus == Status.Approved, participant.tierPurchased < BONUS_TIER);
+    return (participant.whitelistStatus == Status.Approved, participant.tierPurchased <= BONUS_TIER);
   }     
 
   /// @dev freeze unsold tokens for use at a later time
