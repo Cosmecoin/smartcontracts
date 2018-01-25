@@ -7,11 +7,12 @@ import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 contract COSTeamWallet is Ownable{
   using SafeMath for uint256;
 
-  uint256 constant public FREEZE_TIME = 425 days; //accounts for ICO days
+  uint256 constant public FREEZE_TIME = 365 days; //accounts for ICO days
   
   COSToken public cosToken;
   uint256 public startTime;
   uint256 public totalWithdrawn;
+  address public crowdsaleContract;
 
   mapping (address => uint256) teamMember;
   
@@ -30,6 +31,21 @@ contract COSTeamWallet is Ownable{
     startTime = now;
     cosToken = COSToken(_cosToken);
     owner = msg.sender;
+  }
+
+  function setCrowdsaleContract(address _crowdsaleContract)
+    public
+    onlyOwner
+  {
+    crowdsaleContract = _crowdsaleContract;
+  }
+
+  function setFreezeTime(uint256 freezeStartTime)
+    external
+  {
+    require(msg.sender == crowdsaleContract);
+    require(crowdsaleContract != address(0));
+    startTime = freezeStartTime;
   }
 
   function addTeamMember(address _teamMember, uint256 _tokenAmount)

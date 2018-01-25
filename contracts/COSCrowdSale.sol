@@ -1,6 +1,7 @@
 pragma solidity 0.4.18;
 
 import './COSToken.sol';
+import './COSTeamWallet.sol';
 import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 
@@ -40,8 +41,9 @@ contract COSCrowdSale is Ownable{
 
   mapping(address => Participant) participants;
 
-  //The Cosmocoin token contract
-  COSToken public cosToken; 
+  //The Cosmocoin token and team wallet contracts
+  COSToken public cosToken;
+  COSTeamWallet public cosTeamWallet; 
 
   struct SaleTier {      
     uint256 tokensToBeSold;  //amount of tokens to be sold in this SaleTier
@@ -86,7 +88,7 @@ contract COSCrowdSale is Ownable{
     require(_teamWallet != 0x0);     
  
     icoEndTime = now + 60 days;
-    teamWallet = _teamWallet;
+    cosTeamWallet = COSTeamWallet(_teamWallet);
     weiRaised = 0;
     cosToken = COSToken(_cosToken);    
     holdings = _holdings;
@@ -232,7 +234,8 @@ contract COSCrowdSale is Ownable{
     icoHasEnded
     onlyOwner
   {
-    cosToken.transferFrom(owner, teamWallet, _internalTokens);
+    cosTeamWallet.setFreezeTime(block.number);
+    cosToken.transferFrom(owner, cosTeamWallet, _internalTokens);
     holdings.transfer(this.balance);   
   }
 
