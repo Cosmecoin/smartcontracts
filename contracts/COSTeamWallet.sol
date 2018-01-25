@@ -28,7 +28,6 @@ contract COSTeamWallet is Ownable{
     public
   {  
     require(_cosToken != 0x0);
-    startTime = now;
     cosToken = COSToken(_cosToken);
     owner = msg.sender;
   }
