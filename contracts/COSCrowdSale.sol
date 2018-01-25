@@ -14,12 +14,10 @@ contract COSCrowdSale is Ownable{
   uint8 constant internal BONUS_TIER = 2;
   uint256 private bonusCounter;
   uint256 public tknsPerPerson;
-  uint256 public icoStartTime;
   uint256 public icoEndTime;
   address public teamWallet;
   uint256 public weiRaised;
   uint256 public ethPrice;
-  uint256 public decimals;
   address public holdings;
   address public owner;
   uint256 public cap;
@@ -87,12 +85,10 @@ contract COSCrowdSale is Ownable{
     require(_cosToken != 0x0);
     require(_teamWallet != 0x0);     
  
-    icoStartTime = now; //pick a block number to start on
-    icoEndTime = now + 60 days; //pick a block number to end on
+    icoEndTime = now + 60 days;
     teamWallet = _teamWallet;
     weiRaised = 0;
     cosToken = COSToken(_cosToken);    
-    decimals = 10;
     holdings = _holdings;
     owner = msg.sender;
     cap = 5969 ether;
@@ -130,6 +126,7 @@ contract COSCrowdSale is Ownable{
     
     Participant storage participant = participants[msg.sender];
 
+    require(msg.sender != owner);
     require(ethPrice != 0);
     require(participant.whitelistStatus != Status.Denied);
     require(msg.value >= MIN_CONTRIBUTION);
