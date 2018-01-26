@@ -16,7 +16,6 @@ contract COSCrowdSale is Ownable{
   uint256 private bonusCounter;
   uint256 public tknsPerPerson;
   uint256 public icoEndTime;
-  address public teamWallet;
   uint256 public weiRaised;
   uint256 public ethPrice;
   address public holdings;
@@ -236,7 +235,7 @@ contract COSCrowdSale is Ownable{
     icoHasEnded
     onlyOwner
   {
-    cosTeamWallet.setFreezeTime(block.number);
+    cosTeamWallet.setFreezeTime(now);
     cosToken.transferFrom(owner, cosTeamWallet, _internalTokens);
     holdings.transfer(this.balance);   
   }

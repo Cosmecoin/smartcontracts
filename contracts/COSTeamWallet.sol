@@ -39,14 +39,14 @@ contract COSTeamWallet is Ownable{
     crowdsaleContract = _crowdsaleContract;
   }
 
-  function setFreezeTime(uint256 freezeStartTime)
+  
+function setFreezeTime(uint256 freezeStartTime)
     external
   {
     require(msg.sender == crowdsaleContract);
     require(crowdsaleContract != address(0));
     startTime = freezeStartTime;
   }
-
   function addTeamMember(address _teamMember, uint256 _tokenAmount)
     public
     onlyOwner
