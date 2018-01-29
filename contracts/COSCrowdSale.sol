@@ -164,8 +164,6 @@ contract COSCrowdSale is Ownable{
 
     uint256 amount = msg.value.sub(remainingWei);
     weiRaised += amount;
-    holdings.transfer(amount);
-
     participant.remainingWei += remainingWei;
     participant.contrAmount += amount;
     participant.qtyTokens += totalTokensRequested;
@@ -227,6 +225,17 @@ contract COSCrowdSale is Ownable{
     return (participant.whitelistStatus == Status.Approved, participant.tierPurchased <= BONUS_TIER);
   }     
 
+  ///@notice owner withdraws ether periodically from the crowdsale contract
+  function ownerWithdrawal()
+    public
+    onlyOwner
+    returns(bool success)
+  {
+    LogWithdrawal(msg.sender, this.balance);//do we really want to broadcast this
+    holdings.transfer(this.balance);
+    return(true); 
+  }
+
   /// @dev freeze unsold tokens for use at a later time
   /// and transfer team, owner and other internally promised tokens
   /// param total number of tokens being transfered to the freeze wallet
@@ -237,7 +246,6 @@ contract COSCrowdSale is Ownable{
   {
     cosTeamWallet.setFreezeTime(now);
     cosToken.transferFrom(owner, cosTeamWallet, _internalTokens);
-    holdings.transfer(this.balance);   
   }
 
   /// @notice calculate unsold tokens for transfer to holdings to be used at a later date
