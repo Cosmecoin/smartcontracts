@@ -1,4 +1,4 @@
-pragma solidity 0.4.18;
+pragma solidity 0.4.19;
 
 import 'zeppelin-solidity/contracts/token/StandardToken.sol';
 import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
@@ -6,7 +6,7 @@ import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 contract COSToken is StandardToken, Ownable {
     
     address public crowdsaleContract;
-    string public constant symbol = "COS";
+    string public constant symbol = "COSX";
     string public constant name = "Cosmecoin";
     uint8 public constant decimals = 10;
     bool public paused;
@@ -14,7 +14,7 @@ contract COSToken is StandardToken, Ownable {
   function COSToken()
     public
     {
-        totalSupply = 330000000 * 10**10;
+        totalSupply = 500000000 * 10**10;
         paused = true;
         balances[msg.sender] = totalSupply;
         assert(balances[owner] == totalSupply);                

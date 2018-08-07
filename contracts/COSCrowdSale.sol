@@ -1,4 +1,4 @@
-pragma solidity 0.4.18;
+pragma solidity 0.4.19;
 
 import './COSToken.sol';
 import './COSTeamWallet.sol';
@@ -11,8 +11,8 @@ contract COSCrowdSale is Ownable{
   uint256 constant internal MIN_CONTRIBUTION = 1 ether;
   uint256 constant internal TOKEN_DECIMALS = 10**10;
   uint256 constant internal ETH_DECIMALS = 10**18;
-  uint8 constant internal TIERS = 7;
-  uint8 constant internal BONUS_TIER = 2;
+  uint8 constant internal TIERS = 6;
+  uint8 constant internal BONUS_TIER = 1;
   uint256 private bonusCounter;
   uint256 public tknsPerPerson;
   uint256 public icoEndTime;
@@ -38,7 +38,7 @@ contract COSCrowdSale is Ownable{
     Status whitelistStatus;
   }
 
-  mapping(address => Participant) participants;
+  mapping(address => Participant) public participants;
 
   //The Cosmocoin token and team wallet contracts
   COSToken public cosToken;
@@ -92,12 +92,11 @@ contract COSCrowdSale is Ownable{
     cosToken = COSToken(_cosToken);    
     holdings = _holdings;
     owner = msg.sender;
-    cap = 5969 ether;
+    cap = 7812.5 ether;
 
-    saleTier[0].tokensToBeSold = (5000000)*TOKEN_DECIMALS;
-    saleTier[1].tokensToBeSold = (7500000)*TOKEN_DECIMALS;
-
-   for(uint8 i=2; i<TIERS; i++){ 
+    saleTier[0].tokensToBeSold = (12500000)*TOKEN_DECIMALS;
+   
+   for(uint8 i=1; i<TIERS; i++){ 
     saleTier[i].tokensToBeSold = (37500000)*TOKEN_DECIMALS;
    } 
  }
@@ -139,14 +138,14 @@ contract COSCrowdSale is Ownable{
     uint256 remainingWei = msg.value.add(participant.remainingWei);
     participant.remainingWei = 0;
     uint256 totalTokensRequested;
-    uint256 price = (ETH_DECIMALS.mul(uint256(16+(4*tier))).div(1000)).div(ethPrice);
+    uint256 price = (ETH_DECIMALS.mul(uint256(20+(4*tier))).div(1000)).div(ethPrice);
     uint256 tierRemainingTokens;
     uint256 tknsRequested;
   
     while(remainingWei >= price && tier != TIERS) {
 
       SaleTier storage tiers = saleTier[tier];
-      price = (ETH_DECIMALS.mul(uint256(16+(4*tier))).div(1000)).div(ethPrice);
+      price = (ETH_DECIMALS.mul(uint256(20+(4*tier))).div(1000)).div(ethPrice);
       tknsRequested = (remainingWei.div(price)).mul(TOKEN_DECIMALS);
       tierRemainingTokens = tiers.tokensToBeSold.sub(tiers.tokensSold);
       if(tknsRequested >= tierRemainingTokens){
